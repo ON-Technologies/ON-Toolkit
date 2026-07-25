@@ -2,6 +2,10 @@
 
 namespace ONToolkit\Modules\DbCleaner\Rest;
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 use ONToolkit\Core\Rest\RestController;
 use ONToolkit\Modules\DbCleaner\Services\CleanUpService;
 use WP_REST_Request;
@@ -18,15 +22,17 @@ class DbCleanerController extends RestController
 
     public function register_routes(): void
     {
-        register_rest_route($this->namespace, '/db-cleaner/audit', [
+        $namespace = (string)$this->namespace;
+
+        register_rest_route($namespace, '/db-cleaner/audit', [
             [
                 'methods' => 'GET',
-                'callback' => [$this, 'getAudit'],
+                'callback' => [$this, 'getAuditSummary'],
                 'permission_callback' => [$this, 'checkPermission'],
             ],
         ]);
 
-        register_rest_route($this->namespace, '/db-cleaner/clean', [
+        register_rest_route($namespace, '/db-cleaner/clean', [
             [
                 'methods' => 'POST',
                 'callback' => [$this, 'cleanTarget'],
@@ -35,20 +41,20 @@ class DbCleanerController extends RestController
         ]);
     }
 
-    public function getAudit(WP_REST_Request $request): WP_REST_Response
+    public function getAuditSummary(WP_REST_Request $request): WP_REST_Response
     {
-        $audit = $this->cleanUpService->getAuditSummary();
-        return $this->respondSuccess($audit);
+        $summary = $this->cleanUpService->getAuditSummary();
+        return $this->respondSuccess($summary);
     }
 
     public function cleanTarget(WP_REST_Request $request): WP_REST_Response
     {
-        $target = sanitize_text_field($request->get_param('target') ?? '');
+        $target = sanitize_text_field((string)($request->get_param('target') ?? ''));
         $dry_run = (bool)$request->get_param('dry_run');
-        $confirm = sanitize_text_field($request->get_param('confirm_action') ?? '');
+        $confirm = sanitize_text_field((string)($request->get_param('confirm_action') ?? ''));
 
         if (!$dry_run && $confirm !== 'CONFIRM_CLEANUP') {
-            return $this->respondError('Explicit confirmation action string required for destructive cleanup.', 'ontk_missing_confirmation', 400);
+            return $this->respondError('Action requires explicit confirmation string CONFIRM_CLEANUP', 'ontk_unconfirmed', 400);
         }
 
         $result = $this->cleanUpService->cleanTarget($target, $dry_run);

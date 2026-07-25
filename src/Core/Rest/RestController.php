@@ -2,52 +2,43 @@
 
 namespace ONToolkit\Core\Rest;
 
-use WP_REST_Controller;
-use WP_REST_Request;
-use WP_REST_Response;
-use WP_Error;
+if (!defined('ABSPATH')) {
+    exit;
+}
 
-/**
- * Base REST Controller enforcing security policies across all ON Toolkit endpoints.
- */
+use WP_REST_Controller;
+use WP_REST_Response;
+use WP_REST_Request;
+
 abstract class RestController extends WP_REST_Controller
 {
-    protected string $namespace = 'on-toolkit/v1';
-
     /**
-     * Permission callback: requires administrator capability (`manage_options`).
-     * @return bool|WP_Error
+     * @var string
      */
-    public function checkPermission(WP_REST_Request $request)
-    {
-        if (!current_user_can('manage_options')) {
-            return new WP_Error(
-                'ontk_rest_forbidden',
-                __('You do not have sufficient permissions to access this endpoint.', 'on-toolkit'),
-                ['status' => 403]
-            );
-        }
+    protected $namespace = 'on-toolkit/v1';
 
-        return true;
+    public function checkPermission(WP_REST_Request $request): bool
+    {
+        return current_user_can('manage_options');
     }
 
     /**
-     * Send structured success response.
-     * @param mixed $data
+     * @param array<string, mixed>|object|null $data
      */
-    protected function respondSuccess($data = [], int $status = 200): WP_REST_Response
+    protected function respondSuccess($data = null, int $status = 200): WP_REST_Response
     {
         return new WP_REST_Response([
             'success' => true,
-            'data' => $data,
+            'data'    => $data,
         ], $status);
     }
 
-    /**
-     * Send structured error response.
-     */
-    protected function respondError(string $message, string $code = 'ontk_error', int $status = 400): WP_Error
+    protected function respondError(string $message, string $code = 'ontk_error', int $status = 400): WP_REST_Response
     {
-        return new WP_Error($code, $message, ['status' => $status]);
+        return new WP_REST_Response([
+            'success' => false,
+            'code'    => $code,
+            'message' => $message,
+        ], $status);
     }
 }

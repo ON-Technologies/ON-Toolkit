@@ -2,7 +2,17 @@
 
 namespace ONToolkit\Modules\LinkScanner;
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 use ONToolkit\Core\AbstractModule;
+use ONToolkit\Core\Rest\RestController;
+use ONToolkit\Modules\LinkScanner\Crawler\PostCrawler;
+use ONToolkit\Modules\LinkScanner\Crawler\MenuCrawler;
+use ONToolkit\Modules\LinkScanner\Services\HttpVerifier;
+use ONToolkit\Modules\LinkScanner\Repositories\LinkRepository;
+use ONToolkit\Modules\LinkScanner\Services\BackgroundScanner;
 use ONToolkit\Modules\LinkScanner\Rest\LinkScannerController;
 
 class LinkScannerModule extends AbstractModule
@@ -24,19 +34,34 @@ class LinkScannerModule extends AbstractModule
 
     public function boot(): void
     {
-        $backgroundScanner = new \ONToolkit\Modules\LinkScanner\Services\BackgroundScanner();
-        $backgroundScanner->boot();
+        $postCrawler = new PostCrawler();
+        $menuCrawler = new MenuCrawler();
+        $httpVerifier = new HttpVerifier();
+        $linkRepository = new LinkRepository();
 
-        add_action('rest_api_init', function () {
-            $controller = new LinkScannerController();
+        $backgroundScanner = new BackgroundScanner($postCrawler, $menuCrawler, $httpVerifier, $linkRepository);
+        $backgroundScanner->initHooks();
+
+        add_action('rest_api_init', function () use ($linkRepository, $backgroundScanner) {
+            $controller = new LinkScannerController($linkRepository, $backgroundScanner);
             $controller->register_routes();
         });
     }
 
+    /**
+     * @return array<int, RestController>
+     */
     public function getRestControllers(): array
     {
+        $postCrawler = new PostCrawler();
+        $menuCrawler = new MenuCrawler();
+        $httpVerifier = new HttpVerifier();
+        $linkRepository = new LinkRepository();
+
+        $backgroundScanner = new BackgroundScanner($postCrawler, $menuCrawler, $httpVerifier, $linkRepository);
+
         return [
-            new LinkScannerController(),
+            new LinkScannerController($linkRepository, $backgroundScanner),
         ];
     }
 }

@@ -2,29 +2,35 @@
 
 namespace ONToolkit\Modules\LinkScanner\Crawler;
 
-/**
- * Extracts links from WordPress navigation menus.
- */
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 class MenuCrawler
 {
     /**
-     * Extract URLs from all registered nav menu items.
+     * @return array<int, array<string, mixed>>
      */
     public function extractMenuUrls(): array
     {
-        $urls = [];
         $menus = wp_get_nav_menus();
+        $urls = [];
 
         foreach ($menus as $menu) {
             $items = wp_get_nav_menu_items($menu->term_id);
-            if (!empty($items)) {
-                foreach ($items as $item) {
-                    if (!empty($item->url) && (strncmp($item->url, 'http://', 7) === 0 || strncmp($item->url, 'https://', 8) === 0)) {
+            if (!is_array($items)) continue;
+
+            foreach ($items as $item) {
+                if ($item instanceof \WP_Post) {
+                    $url = get_post_meta($item->ID, '_menu_item_url', true);
+                    if (!empty($url) && is_string($url) && strncmp($url, 'http', 4) === 0) {
                         $urls[] = [
-                            'url' => strtok(trim($item->url), '#'),
-                            'menu_id' => $menu->term_id,
-                            'item_id' => $item->ID,
-                            'title' => $item->title,
+                            'url' => $url,
+                            'occurrence' => [
+                                'type' => 'nav_menu',
+                                'id' => (int)$menu->term_id,
+                                'title' => $menu->name . ' -> ' . $item->post_title,
+                            ]
                         ];
                     }
                 }

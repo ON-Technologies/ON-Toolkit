@@ -2,6 +2,10 @@
 
 namespace ONToolkit\Modules\MediaInspector\Rest;
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 use ONToolkit\Core\Rest\RestController;
 use ONToolkit\Modules\MediaInspector\Services\UsageDetector;
 use WP_REST_Request;
@@ -18,7 +22,9 @@ class MediaInspectorController extends RestController
 
     public function register_routes(): void
     {
-        register_rest_route($this->namespace, '/media-inspector/audit', [
+        $namespace = (string)$this->namespace;
+
+        register_rest_route($namespace, '/media-inspector/audit', [
             [
                 'methods' => 'GET',
                 'callback' => [$this, 'auditMedia'],
@@ -26,7 +32,7 @@ class MediaInspectorController extends RestController
             ],
         ]);
 
-        register_rest_route($this->namespace, '/media-inspector/delete', [
+        register_rest_route($namespace, '/media-inspector/delete', [
             [
                 'methods' => 'POST',
                 'callback' => [$this, 'deleteAttachment'],
@@ -34,7 +40,7 @@ class MediaInspectorController extends RestController
             ],
         ]);
 
-        register_rest_route($this->namespace, '/media-inspector/update-alt', [
+        register_rest_route($namespace, '/media-inspector/update-alt', [
             [
                 'methods' => 'POST',
                 'callback' => [$this, 'updateAltText'],
@@ -42,7 +48,7 @@ class MediaInspectorController extends RestController
             ],
         ]);
 
-        register_rest_route($this->namespace, '/media-inspector/batch-delete', [
+        register_rest_route($namespace, '/media-inspector/batch-delete', [
             [
                 'methods' => 'POST',
                 'callback' => [$this, 'batchDeleteMedia'],
@@ -73,7 +79,7 @@ class MediaInspectorController extends RestController
     {
         $limit = (int)($request->get_param('limit') ?? 50);
         $offset = (int)($request->get_param('offset') ?? 0);
-        $filter = sanitize_text_field($request->get_param('filter') ?? 'all');
+        $filter = sanitize_text_field((string)($request->get_param('filter') ?? 'all'));
 
         $result = $this->usageDetector->auditMedia($limit, $offset, $filter);
         return $this->respondSuccess($result);
@@ -90,7 +96,7 @@ class MediaInspectorController extends RestController
 
         $result = $this->usageDetector->deleteUnusedAttachment($attachment_id, $force);
         if (!$result['success']) {
-            return $this->respondError($result['message'] ?? 'Failed to delete attachment', 'ontk_delete_failed', 400);
+            return $this->respondError((string)($result['message'] ?? 'Failed to delete attachment'), 'ontk_delete_failed', 400);
         }
 
         return $this->respondSuccess($result);
@@ -99,16 +105,13 @@ class MediaInspectorController extends RestController
     public function updateAltText(WP_REST_Request $request): WP_REST_Response
     {
         $attachment_id = (int)$request->get_param('attachment_id');
-        $alt_text = sanitize_text_field($request->get_param('alt_text') ?? '');
+        $alt_text = sanitize_text_field((string)($request->get_param('alt_text') ?? ''));
 
         if (!$attachment_id) {
             return $this->respondError('Missing attachment_id', 'ontk_missing_id', 400);
         }
 
-        update_post_meta($attachment_id, '_wp_attachment_image_alt', $alt_text);
-        return $this->respondSuccess([
-            'attachment_id' => $attachment_id,
-            'alt_text' => $alt_text,
-        ]);
+        $result = $this->usageDetector->updateAltText($attachment_id, $alt_text);
+        return $this->respondSuccess($result);
     }
 }

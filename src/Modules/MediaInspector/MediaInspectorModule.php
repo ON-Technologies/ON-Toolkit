@@ -2,19 +2,17 @@
 
 namespace ONToolkit\Modules\MediaInspector;
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 use ONToolkit\Core\AbstractModule;
+use ONToolkit\Core\Rest\RestController;
 use ONToolkit\Modules\MediaInspector\Services\UsageDetector;
 use ONToolkit\Modules\MediaInspector\Rest\MediaInspectorController;
 
 class MediaInspectorModule extends AbstractModule
 {
-    private UsageDetector $usageDetector;
-
-    public function __construct()
-    {
-        $this->usageDetector = new UsageDetector();
-    }
-
     public function getId(): string
     {
         return 'media_inspector';
@@ -27,21 +25,28 @@ class MediaInspectorModule extends AbstractModule
 
     public function getDescription(): string
     {
-        return __('Complete visibility into Media Library usage, unused files, missing ALT texts, and file dimensions.', 'on-toolkit');
+        return __('Audit unused attachments, duplicate filenames, duplicate SHA-256 hashes, missing ALT text, huge PNGs (>1MB), huge JPGs (>500KB), and SVGs.', 'on-toolkit');
     }
 
     public function boot(): void
     {
-        add_action('rest_api_init', function () {
-            $controller = new MediaInspectorController($this->usageDetector);
+        $usageDetector = new UsageDetector();
+
+        add_action('rest_api_init', function () use ($usageDetector) {
+            $controller = new MediaInspectorController($usageDetector);
             $controller->register_routes();
         });
     }
 
+    /**
+     * @return array<int, RestController>
+     */
     public function getRestControllers(): array
     {
+        $usageDetector = new UsageDetector();
+
         return [
-            new MediaInspectorController($this->usageDetector),
+            new MediaInspectorController($usageDetector),
         ];
     }
 }

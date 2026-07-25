@@ -7,18 +7,18 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Service to audit Media Library attachments: duplicate filenames, duplicate MD5 hashes, 
+ * Service to audit Media Library attachments: duplicate filenames, duplicate SHA-256 hashes, 
  * unused thumbnails, wrong dimensions, huge PNGs (>1MB), huge JPGs (>500KB), and SVG detection.
  */
 class UsageDetector
 {
     /**
      * Audit media library items with enhanced filter rules.
+     *
+     * @return array<string, mixed>
      */
     public function auditMedia(int $limit = 50, int $offset = 0, string $filter = 'all'): array
     {
-        global $wpdb;
-
         $args = [
             'post_type'      => 'attachment',
             'post_status'    => 'inherit',
@@ -29,7 +29,10 @@ class UsageDetector
         ];
 
         $query = new \WP_Query($args);
-        $attachments = $query->posts;
+        /** @var array<int, \WP_Post> $attachments */
+        $attachments = array_filter((array)$query->posts, function ($post) {
+            return $post instanceof \WP_Post;
+        });
         $total_found = $query->found_posts;
 
         $items = [];
@@ -45,22 +48,25 @@ class UsageDetector
             'wrong_dimensions_count' => 0,
         ];
 
-        // Track filenames & MD5 hashes for duplicate checks
+        /** @var array<string, int> $filenames */
         $filenames = [];
+        /** @var array<string, int> $hashes */
         $hashes = [];
 
         foreach ($attachments as $attachment) {
             $id = $attachment->ID;
             $file_path = get_attached_file($id);
-            $filename = basename($file_path ?: '');
-            $file_size = ($file_path && file_exists($file_path)) ? filesize($file_path) : 0;
-            $mime_type = $attachment->post_mime_type;
-            $alt_text = get_post_meta($id, '_wp_attachment_image_alt', true);
-            $meta = wp_get_attachment_metadata($id);
+            $filename = basename($file_path ? (string)$file_path : '');
+            $file_size = ($file_path && file_exists($file_path)) ? (int)filesize($file_path) : 0;
+            $mime_type = (string)$attachment->post_mime_type;
+            $alt_text = (string)get_post_meta($id, '_wp_attachment_image_alt', true);
+            /** @var array<string, mixed> $meta */
+            $meta = (array)wp_get_attachment_metadata($id);
             $width = (int)($meta['width'] ?? 0);
             $height = (int)($meta['height'] ?? 0);
             $dimensions = ($width && $height) ? "{$width}x{$height}" : 'Unknown';
-            $url = wp_get_attachment_url($id);
+            $raw_url = wp_get_attachment_url($id);
+            $url = is_string($raw_url) ? $raw_url : '';
 
             // 1. Duplicate Filename Check
             $is_dup_filename = false;
@@ -77,10 +83,10 @@ class UsageDetector
             $is_dup_hash = false;
             if ($file_path && file_exists($file_path) && $file_size < 10 * 1024 * 1024) { // Hash files < 10MB
                 $hash = hash_file('sha256', $file_path);
-                if (isset($hashes[$hash])) {
+                if ($hash && isset($hashes[$hash])) {
                     $is_dup_hash = true;
                     $summary['duplicate_hashes']++;
-                } else {
+                } elseif ($hash) {
                     $hashes[$hash] = $id;
                 }
             }
@@ -93,7 +99,7 @@ class UsageDetector
             if ($is_huge_jpg) $summary['huge_jpg_count']++;
 
             // 4. SVG Detection
-            $is_svg = ($mime_type === 'image/svg+xml' || str_ends_with(strtolower($filename), '.svg'));
+            $is_svg = ($mime_type === 'image/svg+xml' || (strlen($filename) >= 4 && strtolower(substr($filename, -4)) === '.svg'));
             if ($is_svg) $summary['svg_count']++;
 
             // 5. Wrong / Oversized Dimensions (> 3000px width/height)
@@ -147,11 +153,15 @@ class UsageDetector
         ];
     }
 
+    /**
+     * @return array<int, array<string, mixed>>
+     */
     public function getAttachmentUsage(int $attachment_id, string $url): array
     {
         global $wpdb;
         $locations = [];
 
+        /** @var array<int, object{post_id: int}> $featured_posts */
         $featured_posts = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_thumbnail_id' AND meta_value = %d LIMIT 5",
@@ -162,7 +172,7 @@ class UsageDetector
             $locations[] = [
                 'type' => 'featured_image',
                 'post_id' => (int)$fp->post_id,
-                'title' => get_the_title($fp->post_id),
+                'title' => get_the_title((int)$fp->post_id),
             ];
         }
 
@@ -177,6 +187,7 @@ class UsageDetector
 
         if (!empty($url)) {
             $filename = basename($url);
+            /** @var array<int, object{ID: int, post_title: string, post_type: string}> $content_matches */
             $content_matches = $wpdb->get_results(
                 $wpdb->prepare(
                     "SELECT ID, post_title, post_type FROM {$wpdb->posts} 
@@ -199,9 +210,13 @@ class UsageDetector
         return $locations;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function deleteUnusedAttachment(int $attachment_id, bool $force = false): array
     {
-        $url = wp_get_attachment_url($attachment_id);
+        $raw_url = wp_get_attachment_url($attachment_id);
+        $url = is_string($raw_url) ? $raw_url : '';
         $usage = $this->getAttachmentUsage($attachment_id, $url);
 
         if (count($usage) > 0 && !$force) {
@@ -220,11 +235,11 @@ class UsageDetector
     }
 
     /**
-     * Safely update missing ALT text with previous value capture for Undo capability.
+     * @return array<string, mixed>
      */
     public function updateAltText(int $attachment_id, string $new_alt_text): array
     {
-        $previous_alt = get_post_meta($attachment_id, '_wp_attachment_image_alt', true);
+        $previous_alt = (string)get_post_meta($attachment_id, '_wp_attachment_image_alt', true);
         update_post_meta($attachment_id, '_wp_attachment_image_alt', sanitize_text_field($new_alt_text));
 
         return [

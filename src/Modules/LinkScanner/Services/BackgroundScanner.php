@@ -49,7 +49,7 @@ class BackgroundScanner
             'started_at' => current_time('mysql'),
         ]);
 
-        $args = ['batch_offset' => $batch_offset];
+        $args = [$batch_offset];
 
         // Safe Action Scheduler / WooCommerce check with seamless WP-Cron fallback
         if (function_exists('as_enqueue_async_action')) {
@@ -75,15 +75,20 @@ class BackgroundScanner
             'fields'         => 'ids',
         ];
 
+        /** @var array<int, int> $post_ids */
         $post_ids = get_posts($args);
         $total_posts = $this->getTotalPostCount();
 
         if (empty($post_ids)) {
             // Crawl Nav Menus as final step
-            $menu_links = $this->menuCrawler->crawlMenus();
+            $menu_links = $this->menuCrawler->extractMenuUrls();
             foreach ($menu_links as $link) {
-                $check = $this->httpVerifier->checkUrl($link['url']);
-                $this->linkRepository->saveLink($check, [$link['occurrence']]);
+                /** @var string $url */
+                $url = $link['url'] ?? '';
+                /** @var array<string, mixed> $occurrence */
+                $occurrence = $link['occurrence'] ?? [];
+                $check = $this->httpVerifier->checkUrl($url);
+                $this->linkRepository->saveLink($check, [$occurrence]);
             }
 
             update_option('ontk_scan_status', [
@@ -96,9 +101,9 @@ class BackgroundScanner
         }
 
         foreach ($post_ids as $post_id) {
-            $extracted_links = $this->postCrawler->crawlPost((int)$post_id);
+            $extracted_links = $this->postCrawler->extractUrlsFromPost((int)$post_id);
             foreach ($extracted_links as $url => $occurrences) {
-                $check = $this->httpVerifier->checkUrl($url);
+                $check = $this->httpVerifier->checkUrl((string)$url);
                 $this->linkRepository->saveLink($check, $occurrences);
             }
         }

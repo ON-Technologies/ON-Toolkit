@@ -13,6 +13,8 @@ class HttpVerifier
 {
     /**
      * Verify HTTP URL status with fallback & retry flow.
+     *
+     * @return array<string, mixed>
      */
     public function checkUrl(string $url, int $timeout = 5): array
     {
@@ -52,6 +54,8 @@ class HttpVerifier
         }
 
         $latency_ms = (int)(round((microtime(true) - $start_time) * 1000));
+        $headers = is_wp_error($response) ? [] : wp_remote_retrieve_headers($response);
+        $redirect_target = is_array($headers) && isset($headers['location']) ? (string)$headers['location'] : null;
 
         if (is_wp_error($response)) {
             $error_msg = $response->get_error_message();
@@ -83,7 +87,7 @@ class HttpVerifier
         } elseif ($code >= 300 && $code < 400) {
             $status_type = 'redirect';
             $diagnosis = sprintf(__('URL redirects (%d Redirect) to another location.', 'on-toolkit'), $code);
-            $why_text = sprintf(__('Redirect target: %s', 'on-toolkit'), $headers['location'] ?? 'Unknown');
+            $why_text = sprintf(__('Redirect target: %s', 'on-toolkit'), $redirect_target ?? 'Unknown');
         } elseif ($code === 404) {
             $status_type = 'broken';
             $diagnosis = __('404 Not Found — Target page was deleted or renamed.', 'on-toolkit');
@@ -105,7 +109,7 @@ class HttpVerifier
             'url' => $url,
             'status_code' => $code,
             'status_type' => $status_type,
-            'redirect_url' => $headers['location'] ?? null,
+            'redirect_url' => $redirect_target,
             'response_time_ms' => $latency_ms,
             'diagnosis' => $diagnosis,
             'why_text' => $why_text,

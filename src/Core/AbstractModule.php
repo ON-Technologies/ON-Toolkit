@@ -2,24 +2,24 @@
 
 namespace ONToolkit\Core;
 
-/**
- * Base class for ON Toolkit modules.
- */
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+use ONToolkit\Core\Rest\RestController;
+
 abstract class AbstractModule implements ModuleInterface
 {
     protected bool $enabled = true;
 
     public function isEnabled(): bool
     {
-        $active_modules = get_option('ontk_active_modules', [
-            'link_scanner' => true,
-            'media_inspector' => true,
-            'db_cleaner' => true,
-        ]);
-
-        return isset($active_modules[$this->getId()]) ? (bool)$active_modules[$this->getId()] : true;
+        return $this->enabled;
     }
 
+    /**
+     * @return array<int, RestController>
+     */
     public function getRestControllers(): array
     {
         return [];

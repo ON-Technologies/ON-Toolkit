@@ -13,21 +13,25 @@ class LinkRepository
 {
     /**
      * Save or update link status in ontk_links.
+     *
+     * @param array<string, mixed> $data
+     * @param array<int, array<string, mixed>> $occurrences
      */
     public function saveLink(array $data, array $occurrences = []): int
     {
         global $wpdb;
 
-        $url = $data['url'];
+        $url = (string)($data['url'] ?? '');
         $url_hash = md5($url);
         $status_code = (int)($data['status_code'] ?? 0);
-        $status_type = $data['status_type'] ?? 'unknown';
-        $redirect_url = $data['redirect_url'] ?? null;
+        $status_type = (string)($data['status_type'] ?? 'unknown');
+        $redirect_url = isset($data['redirect_url']) ? (string)$data['redirect_url'] : null;
         $response_time_ms = (int)($data['response_time_ms'] ?? 0);
         $now = current_time('mysql');
 
         $table_links = "{$wpdb->prefix}ontk_links";
 
+        /** @var array<string, mixed>|null $existing */
         $existing = $wpdb->get_row(
             $wpdb->prepare("SELECT id, occurrences FROM {$table_links} WHERE url_hash = %s", $url_hash),
             ARRAY_A
@@ -73,6 +77,8 @@ class LinkRepository
 
     /**
      * Query links with pagination & filtering.
+     *
+     * @return array<string, mixed>
      */
     public function getLinks(string $status_type = 'all', int $limit = 50, int $offset = 0, string $search = ''): array
     {
@@ -102,10 +108,11 @@ class LinkRepository
         $params[] = $limit;
         $params[] = $offset;
 
+        /** @var array<int, array<string, mixed>> $results */
         $results = $wpdb->get_results($wpdb->prepare($sql, $params), ARRAY_A);
 
         foreach ($results as &$row) {
-            $row['occurrences'] = !empty($row['occurrences']) ? json_decode($row['occurrences'], true) : [];
+            $row['occurrences'] = !empty($row['occurrences']) ? json_decode((string)$row['occurrences'], true) : [];
         }
 
         return [

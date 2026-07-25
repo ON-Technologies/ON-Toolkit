@@ -2,71 +2,83 @@
 
 namespace ONToolkit\Modules\LinkScanner\Crawler;
 
-/**
- * Extracts internal and external URLs from post content, Gutenberg blocks, and Elementor JSON.
- */
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 class PostCrawler
 {
     /**
-     * Extract unique HTTP/HTTPS URLs from post HTML & Elementor metadata.
+     * @return array<string, array<int, array<string, mixed>>>
      */
     public function extractUrlsFromPost(int $post_id): array
     {
-        $urls = [];
         $post = get_post($post_id);
-
-        if (!$post) {
-            return $urls;
+        if (!$post instanceof \WP_Post) {
+            return [];
         }
 
-        // 1. Extract from post_content HTML
-        if (!empty($post->post_content)) {
-            $urls = array_merge($urls, $this->parseHtmlUrls($post->post_content));
+        $links = [];
+
+        // 1. Crawl standard post_content HTML
+        $html_urls = $this->parseHtmlUrls($post->post_content, $post_id);
+        foreach ($html_urls as $url => $occurrences) {
+            $links[$url] = array_merge($links[$url] ?? [], $occurrences);
         }
 
-        // 2. Extract from Elementor JSON metadata if available
+        // 2. Crawl Elementor JSON meta if present
         $elementor_data = get_post_meta($post_id, '_elementor_data', true);
-        if (!empty($elementor_data)) {
-            $urls = array_merge($urls, $this->parseElementorJson($elementor_data));
-        }
-
-        return array_unique(array_filter($urls));
-    }
-
-    /**
-     * Regex extraction of href attribute values from HTML markup.
-     */
-    public function parseHtmlUrls(string $html): array
-    {
-        $urls = [];
-        // Matches href="..." or href='...'
-        if (preg_match_all('/<a\s+(?:[^>]*?\s+)?href=["\']([^"\']+)["\']/i', $html, $matches)) {
-            foreach ($matches[1] as $url) {
-                $cleaned = trim($url);
-                if (strncmp($cleaned, 'http://', 7) === 0 || strncmp($cleaned, 'https://', 8) === 0) {
-                    $urls[] = strtok($cleaned, '#'); // strip anchor fragment
+        if (!empty($elementor_data) && is_string($elementor_data)) {
+            $json_data = json_decode($elementor_data, true);
+            if (is_array($json_data)) {
+                $elementor_urls = $this->parseElementorJson($json_data, $post_id);
+                foreach ($elementor_urls as $url => $occurrences) {
+                    $links[$url] = array_merge($links[$url] ?? [], $occurrences);
                 }
             }
         }
+
+        return $links;
+    }
+
+    /**
+     * @return array<string, array<int, array<string, mixed>>>
+     */
+    public function parseHtmlUrls(string $content, int $post_id): array
+    {
+        $urls = [];
+        if (empty($content)) return $urls;
+
+        preg_match_all('/<a\s+(?:[^>]*?\s+)?href=["\'](https?:\/\/[^"\']+)["\']/i', $content, $matches);
+
+        if (!empty($matches[1])) {
+            foreach ($matches[1] as $url) {
+                $urls[$url][] = [
+                    'type' => 'post_content',
+                    'id'   => $post_id,
+                    'title' => get_the_title($post_id),
+                ];
+            }
+        }
+
         return $urls;
     }
 
     /**
-     * Recursively extract URLs from Elementor JSON element structure.
-     * @param string|array $elementor_data
+     * @param array<mixed> $elementor_data
+     * @return array<string, array<int, array<string, mixed>>>
      */
-    public function parseElementorJson($elementor_data): array
+    public function parseElementorJson(array $elementor_data, int $post_id): array
     {
         $urls = [];
-        $data = is_string($elementor_data) ? json_decode($elementor_data, true) : $elementor_data;
 
-        if (!is_array($data)) {
-            return $urls;
-        }
-
-        array_walk_recursive($data, function ($value, $key) use (&$urls) {
-            if (is_string($value) && (strncmp($value, 'http://', 7) === 0 || strncmp($value, 'https://', 8) === 0)) {
-                $urls[] = strtok(trim($value), '#');
+        array_walk_recursive($elementor_data, function ($value, $key) use (&$urls, $post_id) {
+            if ($key === 'url' && is_string($value) && strncmp($value, 'http', 4) === 0) {
+                $urls[$value][] = [
+                    'type'  => 'elementor_widget',
+                    'id'    => $post_id,
+                    'title' => get_the_title($post_id),
+                ];
             }
         });
 

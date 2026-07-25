@@ -13,13 +13,15 @@ class HealthScoreCalculator
 {
     /**
      * Calculate 0-100 score and sub-category pillars with configurable penalty weights.
+     *
+     * @return array<string, mixed>
      */
     public function calculateScore(): array
     {
         global $wpdb;
 
-        // Fetch customizable penalty weights from options (Agency configuration feature)
-        $settings = get_option('ontk_settings', []);
+        /** @var array<string, int> $settings */
+        $settings = (array)get_option('ontk_settings', []);
         $weights = [
             'link_penalty'         => (int)($settings['link_penalty'] ?? 5),
             'missing_alt_penalty'  => (int)($settings['missing_alt_penalty'] ?? 3),

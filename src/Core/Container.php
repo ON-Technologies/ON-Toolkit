@@ -6,17 +6,24 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-use Exception;
-use InvalidArgumentException;
-
 /**
- * Lightweight PSR-11 inspired Dependency Injection Container.
+ * Lightweight Dependency Injection Container for ON Toolkit.
  */
 class Container
 {
     private static ?Container $instance = null;
+
+    /**
+     * @var array<string, callable>
+     */
     private array $services = [];
+
+    /**
+     * @var array<string, object>
+     */
     private array $instances = [];
+
+    private function __construct() {}
 
     public static function getInstance(): Container
     {
@@ -26,54 +33,27 @@ class Container
         return self::$instance;
     }
 
-    /**
-     * Register a service factory or class name.
-     * @param string $id
-     * @param callable|string|object $concrete
-     */
-    public function set(string $id, $concrete): void
+    public function bind(string $id, callable $factory): void
     {
-        $this->services[$id] = $concrete;
-        unset($this->instances[$id]);
+        $this->services[$id] = $factory;
     }
 
-    /**
-     * Get a service by ID.
-     * @param string $id
-     * @return mixed
-     */
-    public function get(string $id)
+    public function get(string $id): object
     {
         if (isset($this->instances[$id])) {
             return $this->instances[$id];
         }
 
         if (!isset($this->services[$id])) {
-            if (class_exists($id)) {
-                $this->instances[$id] = new $id();
-                return $this->instances[$id];
-            }
-            throw new InvalidArgumentException("Service not found in container: {$id}");
+            throw new \RuntimeException(sprintf('Service %s not found in container.', $id));
         }
 
-        $concrete = $this->services[$id];
-
-        if (is_callable($concrete)) {
-            $object = $concrete($this);
-        } elseif (is_object($concrete)) {
-            $object = $concrete;
-        } elseif (is_string($concrete) && class_exists($concrete)) {
-            $object = new $concrete();
-        } else {
-            throw new Exception("Invalid service binding for {$id}");
-        }
-
-        $this->instances[$id] = $object;
-        return $object;
+        $this->instances[$id] = call_user_func($this->services[$id], $this);
+        return $this->instances[$id];
     }
 
     public function has(string $id): bool
     {
-        return isset($this->services[$id]) || isset($this->instances[$id]) || class_exists($id);
+        return isset($this->services[$id]) || isset($this->instances[$id]);
     }
 }
