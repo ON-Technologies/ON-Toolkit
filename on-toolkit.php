@@ -29,16 +29,16 @@ if ( file_exists( ONTK_PLUGIN_DIR . 'vendor/autoload.php' ) ) {
 } else {
 	// Basic fallback PSR-4 autoloader when vendor is not generated
 	spl_autoload_register(
-		function ( $class ) {
+		function ( $class_name ) {
 			$prefix   = 'ONToolkit\\';
 			$base_dir = ONTK_PLUGIN_DIR . 'src/';
 			$len      = strlen( $prefix );
 
-			if ( strncmp( $prefix, $class, $len ) !== 0 ) {
+			if ( strncmp( $prefix, $class_name, $len ) !== 0 ) {
 				return;
 			}
 
-			$relative_class = substr( $class, $len );
+			$relative_class = substr( $class_name, $len );
 			$file           = $base_dir . str_replace( '\\', '/', $relative_class ) . '.php';
 
 			if ( file_exists( $file ) ) {

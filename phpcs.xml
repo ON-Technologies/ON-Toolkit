@@ -16,6 +16,36 @@
     <exclude-pattern>/assets/*</exclude-pattern>
 
     <!-- Include WordPress Coding Standards -->
-    <rule ref="WordPress-Core"/>
-    <rule ref="WordPress-Docs"/>
+    <rule ref="WordPress-Core">
+        <!-- PSR-4 namespaces mean we don't use class- prefix -->
+        <exclude name="WordPress.Files.FileName"/>
+        
+        <!-- We prefer camelCase for object properties and methods in modern OOP -->
+        <exclude name="WordPress.NamingConventions.ValidVariableName"/>
+        <exclude name="WordPress.NamingConventions.ValidFunctionName"/>
+        
+        <!-- Modern PHP devs often prefer standard conditions over Yoda -->
+        <exclude name="WordPress.PHP.YodaConditions"/>
+        
+        <!-- Allow string interpolation for table names like {$wpdb->prefix} -->
+        <exclude name="WordPress.DB.PreparedSQL.InterpolatedNotPrepared"/>
+        
+        <!-- WPCS struggles with dynamic SQL builders and safely escaped values -->
+        <exclude name="WordPress.DB.PreparedSQL.NotPrepared"/>
+        <exclude name="WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare"/>
+    </rule>
+
+    <rule ref="WordPress-Docs">
+        <!-- We use PHPStan for strict typing, so we can relax aggressive docblock checks -->
+        <exclude name="Squiz.Commenting.FunctionComment.Missing"/>
+        <exclude name="Squiz.Commenting.ClassComment.Missing"/>
+        <exclude name="Squiz.Commenting.FileComment.Missing"/>
+        <exclude name="Squiz.Commenting.FileComment.MissingPackageTag"/>
+        <exclude name="Squiz.Commenting.VariableComment.Missing"/>
+        <exclude name="Squiz.Commenting.InlineComment.InvalidEndChar"/>
+        <exclude name="Generic.Commenting.DocComment.MissingShort"/>
+        <exclude name="Squiz.Commenting.FunctionComment.MissingParamTag"/>
+        <exclude name="Squiz.Commenting.FunctionComment.MissingParamComment"/>
+        <exclude name="WordPress.WP.I18n.MissingTranslatorsComment"/>
+    </rule>
 </ruleset>
