@@ -2,35 +2,32 @@
 
 namespace ONToolkit\Core\Database;
 
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 /**
  * Handles custom database table schema (Single ontk_links table with JSON occurrences).
  */
-class Schema
-{
-    public const DB_VERSION = '1.1.0';
+class Schema {
 
-    public static function activate(): void
-    {
-        self::createTables();
-        update_option('ontk_db_version', self::DB_VERSION);
-    }
+	public const DB_VERSION = '1.1.0';
 
-    public static function deactivate(): void
-    {
-    }
+	public static function activate(): void {
+		self::createTables();
+		update_option( 'ontk_db_version', self::DB_VERSION );
+	}
 
-    public static function createTables(): void
-    {
-        global $wpdb;
+	public static function deactivate(): void {
+	}
 
-        $charset_collate = $wpdb->get_charset_collate();
-        $table_links = "{$wpdb->prefix}ontk_links";
+	public static function createTables(): void {
+		global $wpdb;
 
-        $sql = "CREATE TABLE {$table_links} (
+		$charset_collate = $wpdb->get_charset_collate();
+		$table_links     = "{$wpdb->prefix}ontk_links";
+
+		$sql = "CREATE TABLE {$table_links} (
             id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
             url_hash char(32) NOT NULL,
             url text NOT NULL,
@@ -46,11 +43,11 @@ class Schema
             KEY status_code (status_code)
         ) {$charset_collate};";
 
-        require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-        dbDelta($sql);
+		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+		dbDelta( $sql );
 
-        // Drop legacy occurrences table if exists
-        $table_old = "{$wpdb->prefix}ontk_link_occurrences";
-        $wpdb->query("DROP TABLE IF EXISTS {$table_old}");
-    }
+		// Drop legacy occurrences table if exists
+		$table_old = "{$wpdb->prefix}ontk_link_occurrences";
+		$wpdb->query( "DROP TABLE IF EXISTS {$table_old}" );
+	}
 }

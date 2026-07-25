@@ -2,8 +2,8 @@
 
 namespace ONToolkit\Modules\LinkScanner\Rest;
 
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 use ONToolkit\Core\Rest\RestController;
@@ -14,151 +14,174 @@ use ONToolkit\Modules\LinkScanner\Services\BackgroundScanner;
 use WP_REST_Request;
 use WP_REST_Response;
 
-class LinkScannerController extends RestController
-{
-    private PostCrawler $postCrawler;
-    private HttpVerifier $httpVerifier;
-    private LinkRepository $linkRepository;
-    private BackgroundScanner $backgroundScanner;
+class LinkScannerController extends RestController {
 
-    public function __construct(
-        LinkRepository $linkRepository,
-        BackgroundScanner $backgroundScanner
-    ) {
-        $this->postCrawler = new PostCrawler();
-        $this->httpVerifier = new HttpVerifier();
-        $this->linkRepository = $linkRepository;
-        $this->backgroundScanner = $backgroundScanner;
-    }
+	private PostCrawler $postCrawler;
+	private HttpVerifier $httpVerifier;
+	private LinkRepository $linkRepository;
+	private BackgroundScanner $backgroundScanner;
 
-    public function register_routes(): void
-    {
-        $namespace = $this->getNamespace();
+	public function __construct(
+		LinkRepository $linkRepository,
+		BackgroundScanner $backgroundScanner
+	) {
+		$this->postCrawler       = new PostCrawler();
+		$this->httpVerifier      = new HttpVerifier();
+		$this->linkRepository    = $linkRepository;
+		$this->backgroundScanner = $backgroundScanner;
+	}
 
-        register_rest_route($namespace, '/link-scanner/links', [
-            [
-                'methods' => 'GET',
-                'callback' => [$this, 'getLinks'],
-                'permission_callback' => [$this, 'checkPermission'],
-            ],
-        ]);
+	public function register_routes(): void {
+		$namespace = $this->getNamespace();
 
-        register_rest_route($namespace, '/link-scanner/scan-post', [
-            [
-                'methods' => 'POST',
-                'callback' => [$this, 'scanPost'],
-                'permission_callback' => [$this, 'checkPermission'],
-            ],
-        ]);
+		register_rest_route(
+			$namespace,
+			'/link-scanner/links',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => array( $this, 'getLinks' ),
+					'permission_callback' => array( $this, 'checkPermission' ),
+				),
+			)
+		);
 
-        register_rest_route($namespace, '/link-scanner/start-scan', [
-            [
-                'methods' => 'POST',
-                'callback' => [$this, 'startFullScan'],
-                'permission_callback' => [$this, 'checkPermission'],
-            ],
-        ]);
+		register_rest_route(
+			$namespace,
+			'/link-scanner/scan-post',
+			array(
+				array(
+					'methods'             => 'POST',
+					'callback'            => array( $this, 'scanPost' ),
+					'permission_callback' => array( $this, 'checkPermission' ),
+				),
+			)
+		);
 
-        register_rest_route($namespace, '/link-scanner/scan-status', [
-            [
-                'methods' => 'GET',
-                'callback' => [$this, 'getScanStatus'],
-                'permission_callback' => [$this, 'checkPermission'],
-            ],
-        ]);
+		register_rest_route(
+			$namespace,
+			'/link-scanner/start-scan',
+			array(
+				array(
+					'methods'             => 'POST',
+					'callback'            => array( $this, 'startFullScan' ),
+					'permission_callback' => array( $this, 'checkPermission' ),
+				),
+			)
+		);
 
-        register_rest_route($namespace, '/link-scanner/batch-fix', [
-            [
-                'methods' => 'POST',
-                'callback' => [$this, 'batchFixLinks'],
-                'permission_callback' => [$this, 'checkPermission'],
-            ],
-        ]);
-    }
+		register_rest_route(
+			$namespace,
+			'/link-scanner/scan-status',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => array( $this, 'getScanStatus' ),
+					'permission_callback' => array( $this, 'checkPermission' ),
+				),
+			)
+		);
 
-    public function batchFixLinks(WP_REST_Request $request): WP_REST_Response
-    {
-        global $wpdb;
-        $action = sanitize_text_field((string)($request->get_param('action') ?? 'ignore'));
-        $ids = array_map('absint', (array)($request->get_param('ids') ?? []));
+		register_rest_route(
+			$namespace,
+			'/link-scanner/batch-fix',
+			array(
+				array(
+					'methods'             => 'POST',
+					'callback'            => array( $this, 'batchFixLinks' ),
+					'permission_callback' => array( $this, 'checkPermission' ),
+				),
+			)
+		);
+	}
 
-        if (empty($ids)) {
-            return $this->respondError('No link IDs provided', 'ontk_missing_ids', 400);
-        }
+	public function batchFixLinks( WP_REST_Request $request ): WP_REST_Response {
+		global $wpdb;
+		$action = sanitize_text_field( (string) ( $request->get_param( 'action' ) ?? 'ignore' ) );
+		$ids    = array_map( 'absint', (array) ( $request->get_param( 'ids' ) ?? array() ) );
 
-        $table_links = "{$wpdb->prefix}ontk_links";
-        $placeholders = implode(',', array_fill(0, count($ids), '%d'));
+		if ( empty( $ids ) ) {
+			return $this->respondError( 'No link IDs provided', 'ontk_missing_ids', 400 );
+		}
 
-        if ($action === 'delete') {
-            $wpdb->query($wpdb->prepare("DELETE FROM {$table_links} WHERE id IN ({$placeholders})", $ids));
-        } elseif ($action === 'ignore') {
-            $wpdb->query($wpdb->prepare("UPDATE {$table_links} SET status_type = 'ok' WHERE id IN ({$placeholders})", $ids));
-        }
+		$table_links  = "{$wpdb->prefix}ontk_links";
+		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
 
-        return $this->respondSuccess([
-            'action' => $action,
-            'processed_count' => count($ids),
-        ]);
-    }
+		if ( $action === 'delete' ) {
+			$wpdb->query( $wpdb->prepare( "DELETE FROM {$table_links} WHERE id IN ({$placeholders})", $ids ) );
+		} elseif ( $action === 'ignore' ) {
+			$wpdb->query( $wpdb->prepare( "UPDATE {$table_links} SET status_type = 'ok' WHERE id IN ({$placeholders})", $ids ) );
+		}
 
-    public function startFullScan(WP_REST_Request $request): WP_REST_Response
-    {
-        $this->backgroundScanner->dispatchScan(0);
-        return $this->respondSuccess([
-            'status' => 'started',
-            'message' => 'Background scan dispatched successfully.',
-        ]);
-    }
+		return $this->respondSuccess(
+			array(
+				'action'          => $action,
+				'processed_count' => count( $ids ),
+			)
+		);
+	}
 
-    public function getScanStatus(WP_REST_Request $request): WP_REST_Response
-    {
-        /** @var array<string, mixed> $status */
-        $status = (array)get_option('ontk_scan_status', [
-            'status' => 'idle',
-            'scanned_posts' => 0,
-            'total_posts' => 0,
-            'progress_percentage' => 0,
-        ]);
+	public function startFullScan( WP_REST_Request $request ): WP_REST_Response {
+		$this->backgroundScanner->dispatchScan( 0 );
+		return $this->respondSuccess(
+			array(
+				'status'  => 'started',
+				'message' => 'Background scan dispatched successfully.',
+			)
+		);
+	}
 
-        $total = (int)($status['total_posts'] ?? 0);
-        $scanned = (int)($status['scanned_posts'] ?? 0);
-        $status['progress_percentage'] = $total > 0 ? (int)round(($scanned / $total) * 100) : 0;
+	public function getScanStatus( WP_REST_Request $request ): WP_REST_Response {
+		/** @var array<string, mixed> $status */
+		$status = (array) get_option(
+			'ontk_scan_status',
+			array(
+				'status'              => 'idle',
+				'scanned_posts'       => 0,
+				'total_posts'         => 0,
+				'progress_percentage' => 0,
+			)
+		);
 
-        return $this->respondSuccess($status);
-    }
+		$total                         = (int) ( $status['total_posts'] ?? 0 );
+		$scanned                       = (int) ( $status['scanned_posts'] ?? 0 );
+		$status['progress_percentage'] = $total > 0 ? (int) round( ( $scanned / $total ) * 100 ) : 0;
 
-    public function getLinks(WP_REST_Request $request): WP_REST_Response
-    {
-        $status_type = sanitize_text_field((string)($request->get_param('status_type') ?? 'all'));
-        $limit = (int)($request->get_param('limit') ?? 50);
-        $offset = (int)($request->get_param('offset') ?? 0);
-        $search = sanitize_text_field((string)($request->get_param('search') ?? ''));
+		return $this->respondSuccess( $status );
+	}
 
-        $result = $this->linkRepository->getLinks($status_type, $limit, $offset, $search);
-        return $this->respondSuccess($result);
-    }
+	public function getLinks( WP_REST_Request $request ): WP_REST_Response {
+		$status_type = sanitize_text_field( (string) ( $request->get_param( 'status_type' ) ?? 'all' ) );
+		$limit       = (int) ( $request->get_param( 'limit' ) ?? 50 );
+		$offset      = (int) ( $request->get_param( 'offset' ) ?? 0 );
+		$search      = sanitize_text_field( (string) ( $request->get_param( 'search' ) ?? '' ) );
 
-    public function scanPost(WP_REST_Request $request): WP_REST_Response
-    {
-        $post_id = (int)$request->get_param('post_id');
+		$result = $this->linkRepository->getLinks( $status_type, $limit, $offset, $search );
+		return $this->respondSuccess( $result );
+	}
 
-        if (!$post_id) {
-            return $this->respondError('Missing post_id', 'ontk_missing_id', 400);
-        }
+	public function scanPost( WP_REST_Request $request ): WP_REST_Response {
+		$post_id = (int) $request->get_param( 'post_id' );
 
-        $urls = $this->postCrawler->extractUrlsFromPost($post_id);
-        $scanned_results = [];
+		if ( ! $post_id ) {
+			return $this->respondError( 'Missing post_id', 'ontk_missing_id', 400 );
+		}
 
-        foreach ($urls as $url => $occurrences) {
-            $verification = $this->httpVerifier->checkUrl((string)$url);
-            $this->linkRepository->saveLink($verification, $occurrences);
-            $scanned_results[] = $verification;
-        }
+		$urls            = $this->postCrawler->extractUrlsFromPost( $post_id );
+		$scanned_results = array();
 
-        return $this->respondSuccess([
-            'post_id' => $post_id,
-            'urls_found' => count($urls),
-            'scanned' => $scanned_results,
-        ]);
-    }
+		foreach ( $urls as $url => $occurrences ) {
+			$verification = $this->httpVerifier->checkUrl( (string) $url );
+			$this->linkRepository->saveLink( $verification, $occurrences );
+			$scanned_results[] = $verification;
+		}
+
+		return $this->respondSuccess(
+			array(
+				'post_id'    => $post_id,
+				'urls_found' => count( $urls ),
+				'scanned'    => $scanned_results,
+			)
+		);
+	}
 }

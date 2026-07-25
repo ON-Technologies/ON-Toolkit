@@ -2,8 +2,8 @@
 
 namespace ONToolkit\Modules\LinkScanner\Services;
 
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 use ONToolkit\Modules\LinkScanner\Crawler\PostCrawler;
@@ -13,119 +13,124 @@ use ONToolkit\Modules\LinkScanner\Repositories\LinkRepository;
 /**
  * Handles non-blocking background link scanning via Action Scheduler or WP-Cron fallback.
  */
-class BackgroundScanner
-{
-    private PostCrawler $postCrawler;
-    private MenuCrawler $menuCrawler;
-    private HttpVerifier $httpVerifier;
-    private LinkRepository $linkRepository;
+class BackgroundScanner {
 
-    public function __construct(
-        PostCrawler $postCrawler,
-        MenuCrawler $menuCrawler,
-        HttpVerifier $httpVerifier,
-        LinkRepository $linkRepository
-    ) {
-        $this->postCrawler = $postCrawler;
-        $this->menuCrawler = $menuCrawler;
-        $this->httpVerifier = $httpVerifier;
-        $this->linkRepository = $linkRepository;
-    }
+	private PostCrawler $postCrawler;
+	private MenuCrawler $menuCrawler;
+	private HttpVerifier $httpVerifier;
+	private LinkRepository $linkRepository;
 
-    public function initHooks(): void
-    {
-        add_action('ontk_process_link_scan_batch', [$this, 'processBatch']);
-    }
+	public function __construct(
+		PostCrawler $postCrawler,
+		MenuCrawler $menuCrawler,
+		HttpVerifier $httpVerifier,
+		LinkRepository $linkRepository
+	) {
+		$this->postCrawler    = $postCrawler;
+		$this->menuCrawler    = $menuCrawler;
+		$this->httpVerifier   = $httpVerifier;
+		$this->linkRepository = $linkRepository;
+	}
 
-    /**
-     * Start background scan by scheduling initial batch safely via Action Scheduler or WP-Cron fallback.
-     */
-    public function dispatchScan(int $batch_offset = 0): void
-    {
-        update_option('ontk_scan_status', [
-            'status' => 'running',
-            'scanned_posts' => $batch_offset,
-            'total_posts' => $this->getTotalPostCount(),
-            'started_at' => current_time('mysql'),
-        ]);
+	public function initHooks(): void {
+		add_action( 'ontk_process_link_scan_batch', array( $this, 'processBatch' ) );
+	}
 
-        $args = [$batch_offset];
+	/**
+	 * Start background scan by scheduling initial batch safely via Action Scheduler or WP-Cron fallback.
+	 */
+	public function dispatchScan( int $batch_offset = 0 ): void {
+		update_option(
+			'ontk_scan_status',
+			array(
+				'status'        => 'running',
+				'scanned_posts' => $batch_offset,
+				'total_posts'   => $this->getTotalPostCount(),
+				'started_at'    => current_time( 'mysql' ),
+			)
+		);
 
-        // Safe Action Scheduler / WooCommerce check with seamless WP-Cron fallback
-        if (function_exists('as_enqueue_async_action')) {
-            as_enqueue_async_action('ontk_process_link_scan_batch', $args, 'on-toolkit');
-        } else {
-            if (!wp_next_scheduled('ontk_process_link_scan_batch', $args)) {
-                wp_schedule_single_event(time(), 'ontk_process_link_scan_batch', $args);
-            }
-        }
-    }
+		$args = array( $batch_offset );
 
-    /**
-     * Process 20-post micro-batch in background without blocking admin interface.
-     */
-    public function processBatch(int $batch_offset = 0): void
-    {
-        $limit = 20;
-        $args = [
-            'post_type'      => ['post', 'page'],
-            'post_status'    => 'publish',
-            'posts_per_page' => $limit,
-            'offset'         => $batch_offset,
-            'fields'         => 'ids',
-        ];
+		// Safe Action Scheduler / WooCommerce check with seamless WP-Cron fallback
+		if ( function_exists( 'as_enqueue_async_action' ) ) {
+			as_enqueue_async_action( 'ontk_process_link_scan_batch', $args, 'on-toolkit' );
+		} else {
+			if ( ! wp_next_scheduled( 'ontk_process_link_scan_batch', $args ) ) {
+				wp_schedule_single_event( time(), 'ontk_process_link_scan_batch', $args );
+			}
+		}
+	}
 
-        /** @var array<int, int> $post_ids */
-        $post_ids = get_posts($args);
-        $total_posts = $this->getTotalPostCount();
+	/**
+	 * Process 20-post micro-batch in background without blocking admin interface.
+	 */
+	public function processBatch( int $batch_offset = 0 ): void {
+		$limit = 20;
+		$args  = array(
+			'post_type'      => array( 'post', 'page' ),
+			'post_status'    => 'publish',
+			'posts_per_page' => $limit,
+			'offset'         => $batch_offset,
+			'fields'         => 'ids',
+		);
 
-        if (empty($post_ids)) {
-            // Crawl Nav Menus as final step
-            $menu_links = $this->menuCrawler->extractMenuUrls();
-            foreach ($menu_links as $link) {
-                /** @var string $url */
-                $url = $link['url'] ?? '';
-                /** @var array<string, mixed> $occurrence */
-                $occurrence = $link['occurrence'] ?? [];
-                $check = $this->httpVerifier->checkUrl($url);
-                $this->linkRepository->saveLink($check, [$occurrence]);
-            }
+		/** @var array<int, int> $post_ids */
+		$post_ids    = get_posts( $args );
+		$total_posts = $this->getTotalPostCount();
 
-            update_option('ontk_scan_status', [
-                'status' => 'completed',
-                'scanned_posts' => $total_posts,
-                'total_posts' => $total_posts,
-                'completed_at' => current_time('mysql'),
-            ]);
-            return;
-        }
+		if ( empty( $post_ids ) ) {
+			// Crawl Nav Menus as final step
+			$menu_links = $this->menuCrawler->extractMenuUrls();
+			foreach ( $menu_links as $link ) {
+				/** @var string $url */
+				$url = $link['url'] ?? '';
+				/** @var array<string, mixed> $occurrence */
+				$occurrence = $link['occurrence'] ?? array();
+				$check      = $this->httpVerifier->checkUrl( $url );
+				$this->linkRepository->saveLink( $check, array( $occurrence ) );
+			}
 
-        foreach ($post_ids as $post_id) {
-            $extracted_links = $this->postCrawler->extractUrlsFromPost((int)$post_id);
-            foreach ($extracted_links as $url => $occurrences) {
-                $check = $this->httpVerifier->checkUrl((string)$url);
-                $this->linkRepository->saveLink($check, $occurrences);
-            }
-        }
+			update_option(
+				'ontk_scan_status',
+				array(
+					'status'        => 'completed',
+					'scanned_posts' => $total_posts,
+					'total_posts'   => $total_posts,
+					'completed_at'  => current_time( 'mysql' ),
+				)
+			);
+			return;
+		}
 
-        $next_offset = $batch_offset + count($post_ids);
+		foreach ( $post_ids as $post_id ) {
+			$extracted_links = $this->postCrawler->extractUrlsFromPost( (int) $post_id );
+			foreach ( $extracted_links as $url => $occurrences ) {
+				$check = $this->httpVerifier->checkUrl( (string) $url );
+				$this->linkRepository->saveLink( $check, $occurrences );
+			}
+		}
 
-        if ($next_offset < $total_posts) {
-            $this->dispatchScan($next_offset);
-        } else {
-            update_option('ontk_scan_status', [
-                'status' => 'completed',
-                'scanned_posts' => $total_posts,
-                'total_posts' => $total_posts,
-                'completed_at' => current_time('mysql'),
-            ]);
-        }
-    }
+		$next_offset = $batch_offset + count( $post_ids );
 
-    public function getTotalPostCount(): int
-    {
-        $counts = wp_count_posts('post');
-        $page_counts = wp_count_posts('page');
-        return (int)($counts->publish ?? 0) + (int)($page_counts->publish ?? 0);
-    }
+		if ( $next_offset < $total_posts ) {
+			$this->dispatchScan( $next_offset );
+		} else {
+			update_option(
+				'ontk_scan_status',
+				array(
+					'status'        => 'completed',
+					'scanned_posts' => $total_posts,
+					'total_posts'   => $total_posts,
+					'completed_at'  => current_time( 'mysql' ),
+				)
+			);
+		}
+	}
+
+	public function getTotalPostCount(): int {
+		$counts      = wp_count_posts( 'post' );
+		$page_counts = wp_count_posts( 'page' );
+		return (int) ( $counts->publish ?? 0 ) + (int) ( $page_counts->publish ?? 0 );
+	}
 }

@@ -2,26 +2,24 @@
 
 namespace ONToolkit\Core;
 
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 use ONToolkit\Core\Rest\RestController;
 
-abstract class AbstractModule implements ModuleInterface
-{
-    protected bool $enabled = true;
+abstract class AbstractModule implements ModuleInterface {
 
-    public function isEnabled(): bool
-    {
-        return $this->enabled;
-    }
+	protected bool $enabled = true;
 
-    /**
-     * @return array<int, RestController>
-     */
-    public function getRestControllers(): array
-    {
-        return [];
-    }
+	public function isEnabled(): bool {
+		return $this->enabled;
+	}
+
+	/**
+	 * @return array<int, RestController>
+	 */
+	public function getRestControllers(): array {
+		return array();
+	}
 }

@@ -2,122 +2,120 @@
 
 namespace ONToolkit\Modules\LinkScanner\Repositories;
 
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 /**
  * Repository pattern for managing ontk_links table with JSON occurrences.
  */
-class LinkRepository
-{
-    /**
-     * Save or update link status in ontk_links.
-     *
-     * @param array<string, mixed> $data
-     * @param array<int, array<string, mixed>> $occurrences
-     */
-    public function saveLink(array $data, array $occurrences = []): int
-    {
-        global $wpdb;
+class LinkRepository {
 
-        $url = (string)($data['url'] ?? '');
-        $url_hash = md5($url);
-        $status_code = (int)($data['status_code'] ?? 0);
-        $status_type = (string)($data['status_type'] ?? 'unknown');
-        $redirect_url = isset($data['redirect_url']) ? (string)$data['redirect_url'] : null;
-        $response_time_ms = (int)($data['response_time_ms'] ?? 0);
-        $now = current_time('mysql');
+	/**
+	 * Save or update link status in ontk_links.
+	 *
+	 * @param array<string, mixed>             $data
+	 * @param array<int, array<string, mixed>> $occurrences
+	 */
+	public function saveLink( array $data, array $occurrences = array() ): int {
+		global $wpdb;
 
-        $table_links = "{$wpdb->prefix}ontk_links";
+		$url              = (string) ( $data['url'] ?? '' );
+		$url_hash         = md5( $url );
+		$status_code      = (int) ( $data['status_code'] ?? 0 );
+		$status_type      = (string) ( $data['status_type'] ?? 'unknown' );
+		$redirect_url     = isset( $data['redirect_url'] ) ? (string) $data['redirect_url'] : null;
+		$response_time_ms = (int) ( $data['response_time_ms'] ?? 0 );
+		$now              = current_time( 'mysql' );
 
-        /** @var array<string, mixed>|null $existing */
-        $existing = $wpdb->get_row(
-            $wpdb->prepare("SELECT id, occurrences FROM {$table_links} WHERE url_hash = %s", $url_hash),
-            ARRAY_A
-        );
+		$table_links = "{$wpdb->prefix}ontk_links";
 
-        $occurrences_json = !empty($occurrences) ? wp_json_encode($occurrences) : null;
+		/** @var array<string, mixed>|null $existing */
+		$existing = $wpdb->get_row(
+			$wpdb->prepare( "SELECT id, occurrences FROM {$table_links} WHERE url_hash = %s", $url_hash ),
+			ARRAY_A
+		);
 
-        if ($existing) {
-            $wpdb->update(
-                $table_links,
-                [
-                    'status_code' => $status_code,
-                    'status_type' => $status_type,
-                    'redirect_url' => $redirect_url,
-                    'response_time_ms' => $response_time_ms,
-                    'occurrences' => $occurrences_json,
-                    'last_checked_at' => $now,
-                ],
-                ['id' => $existing['id']],
-                ['%d', '%s', '%s', '%d', '%s', '%s'],
-                ['%d']
-            );
-            return (int)$existing['id'];
-        }
+		$occurrences_json = ! empty( $occurrences ) ? wp_json_encode( $occurrences ) : null;
 
-        $wpdb->insert(
-            $table_links,
-            [
-                'url_hash' => $url_hash,
-                'url' => $url,
-                'status_code' => $status_code,
-                'status_type' => $status_type,
-                'redirect_url' => $redirect_url,
-                'response_time_ms' => $response_time_ms,
-                'occurrences' => $occurrences_json,
-                'last_checked_at' => $now,
-            ],
-            ['%s', '%s', '%d', '%s', '%s', '%d', '%s', '%s']
-        );
+		if ( $existing ) {
+			$wpdb->update(
+				$table_links,
+				array(
+					'status_code'      => $status_code,
+					'status_type'      => $status_type,
+					'redirect_url'     => $redirect_url,
+					'response_time_ms' => $response_time_ms,
+					'occurrences'      => $occurrences_json,
+					'last_checked_at'  => $now,
+				),
+				array( 'id' => $existing['id'] ),
+				array( '%d', '%s', '%s', '%d', '%s', '%s' ),
+				array( '%d' )
+			);
+			return (int) $existing['id'];
+		}
 
-        return (int)$wpdb->insert_id;
-    }
+		$wpdb->insert(
+			$table_links,
+			array(
+				'url_hash'         => $url_hash,
+				'url'              => $url,
+				'status_code'      => $status_code,
+				'status_type'      => $status_type,
+				'redirect_url'     => $redirect_url,
+				'response_time_ms' => $response_time_ms,
+				'occurrences'      => $occurrences_json,
+				'last_checked_at'  => $now,
+			),
+			array( '%s', '%s', '%d', '%s', '%s', '%d', '%s', '%s' )
+		);
 
-    /**
-     * Query links with pagination & filtering.
-     *
-     * @return array<string, mixed>
-     */
-    public function getLinks(string $status_type = 'all', int $limit = 50, int $offset = 0, string $search = ''): array
-    {
-        global $wpdb;
-        $table_links = "{$wpdb->prefix}ontk_links";
+		return (int) $wpdb->insert_id;
+	}
 
-        $where = ["1=1"];
-        $params = [];
+	/**
+	 * Query links with pagination & filtering.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function getLinks( string $status_type = 'all', int $limit = 50, int $offset = 0, string $search = '' ): array {
+		global $wpdb;
+		$table_links = "{$wpdb->prefix}ontk_links";
 
-        if ($status_type !== 'all') {
-            $where[] = "status_type = %s";
-            $params[] = $status_type;
-        }
+		$where  = array( '1=1' );
+		$params = array();
 
-        if (!empty($search)) {
-            $where[] = "url LIKE %s";
-            $params[] = '%' . $wpdb->esc_like($search) . '%';
-        }
+		if ( $status_type !== 'all' ) {
+			$where[]  = 'status_type = %s';
+			$params[] = $status_type;
+		}
 
-        $where_sql = implode(' AND ', $where);
+		if ( ! empty( $search ) ) {
+			$where[]  = 'url LIKE %s';
+			$params[] = '%' . $wpdb->esc_like( $search ) . '%';
+		}
 
-        $total_sql = "SELECT COUNT(id) FROM {$table_links} WHERE {$where_sql}";
-        $query_total = !empty($params) ? $wpdb->prepare($total_sql, $params) : $total_sql;
-        $total = (int)$wpdb->get_var($query_total);
+		$where_sql = implode( ' AND ', $where );
 
-        $sql = "SELECT * FROM {$table_links} WHERE {$where_sql} ORDER BY last_checked_at DESC LIMIT %d OFFSET %d";
-        $params[] = $limit;
-        $params[] = $offset;
+		$total_sql   = "SELECT COUNT(id) FROM {$table_links} WHERE {$where_sql}";
+		$query_total = ! empty( $params ) ? $wpdb->prepare( $total_sql, $params ) : $total_sql;
+		$total       = (int) $wpdb->get_var( $query_total );
 
-        /** @var array<int, array<string, mixed>> $results */
-        $results = $wpdb->get_results($wpdb->prepare($sql, $params), ARRAY_A);
+		$sql      = "SELECT * FROM {$table_links} WHERE {$where_sql} ORDER BY last_checked_at DESC LIMIT %d OFFSET %d";
+		$params[] = $limit;
+		$params[] = $offset;
 
-        foreach ($results as &$row) {
-            $row['occurrences'] = !empty($row['occurrences']) ? json_decode((string)$row['occurrences'], true) : [];
-        }
+		/** @var array<int, array<string, mixed>> $results */
+		$results = $wpdb->get_results( $wpdb->prepare( $sql, $params ), ARRAY_A );
 
-        return [
-            'items' => $results,
-            'total' => $total,
-        ];
-    }
+		foreach ( $results as &$row ) {
+			$row['occurrences'] = ! empty( $row['occurrences'] ) ? json_decode( (string) $row['occurrences'], true ) : array();
+		}
+
+		return array(
+			'items' => $results,
+			'total' => $total,
+		);
+	}
 }

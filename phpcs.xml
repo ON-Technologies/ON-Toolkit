@@ -18,5 +18,4 @@
     <!-- Include WordPress Coding Standards -->
     <rule ref="WordPress-Core"/>
     <rule ref="WordPress-Docs"/>
-    <rule ref="WordPress-VIP-Go"/>
 </ruleset>

@@ -5,48 +5,46 @@ namespace ONToolkit\Core;
 /**
  * Module Registry & Lazy-Loader.
  */
-class ModuleRegistry
-{
-    /**
-     * Registered module instances.
-     * @var array<string, ModuleInterface>
-     */
-    private array $modules = [];
+class ModuleRegistry {
 
-    /**
-     * Register a module with the registry.
-     */
-    public function register(ModuleInterface $module): void
-    {
-        $this->modules[$module->getId()] = $module;
-    }
+	/**
+	 * Registered module instances.
+	 *
+	 * @var array<string, ModuleInterface>
+	 */
+	private array $modules = array();
 
-    /**
-     * Boot all active modules. Disabled modules load ZERO hooks/assets.
-     */
-    public function bootActiveModules(): void
-    {
-        foreach ($this->modules as $module) {
-            if ($module->isEnabled()) {
-                $module->boot();
-            }
-        }
-    }
+	/**
+	 * Register a module with the registry.
+	 */
+	public function register( ModuleInterface $module ): void {
+		$this->modules[ $module->getId() ] = $module;
+	}
 
-    /**
-     * Get all registered modules.
-     * @return array<string, ModuleInterface>
-     */
-    public function getModules(): array
-    {
-        return $this->modules;
-    }
+	/**
+	 * Boot all active modules. Disabled modules load ZERO hooks/assets.
+	 */
+	public function bootActiveModules(): void {
+		foreach ( $this->modules as $module ) {
+			if ( $module->isEnabled() ) {
+				$module->boot();
+			}
+		}
+	}
 
-    /**
-     * Get a specific module by ID.
-     */
-    public function getModule(string $id): ?ModuleInterface
-    {
-        return $this->modules[$id] ?? null;
-    }
+	/**
+	 * Get all registered modules.
+	 *
+	 * @return array<string, ModuleInterface>
+	 */
+	public function getModules(): array {
+		return $this->modules;
+	}
+
+	/**
+	 * Get a specific module by ID.
+	 */
+	public function getModule( string $id ): ?ModuleInterface {
+		return $this->modules[ $id ] ?? null;
+	}
 }
