@@ -6,6 +6,7 @@
 
 Find broken links, unused media, missing ALT text, and database bloat — all from a single, high-performance dashboard.
 
+[![CI](https://github.com/ON-Technologies/on-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/ON-Technologies/on-toolkit/actions/workflows/ci.yml)
 [![License: GPL v2+](https://img.shields.io/badge/License-GPL%20v2%2B-blue.svg)](LICENSE)
 [![PHP](https://img.shields.io/badge/PHP-8.1%2B-777BB4?logo=php&logoColor=white)]()
 [![WordPress](https://img.shields.io/badge/WordPress-6.7%2B-21759B?logo=wordpress&logoColor=white)]()

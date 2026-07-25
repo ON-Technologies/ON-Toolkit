@@ -27,6 +27,11 @@
             "ONToolkit\\Tests\\": "tests/"
         }
     },
+    "scripts": {
+        "phpstan": "phpstan analyse --memory-limit=512M",
+        "phpcs": "phpcs",
+        "test": "phpunit"
+    },
     "config": {
         "optimize-autoloader": true,
         "preferred-install": "dist",

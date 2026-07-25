@@ -1,0 +1,88 @@
+name: Production CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  quality-matrix:
+    name: Code Quality & Tests (PHP ${{ matrix.php-version }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ['8.1', '8.2', '8.3']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP Environment
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          coverage: none
+          tools: composer:v2
+
+      - name: Get Composer Cache Directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.json') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Install Composer Dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Run PHPStan Static Analysis (Level 8)
+        run: composer phpstan
+
+      - name: Run WordPress Coding Standards (PHPCS)
+        run: composer phpcs
+
+      - name: Run PHPUnit Test Suite
+        run: composer test
+
+  package-release:
+    name: Build Release Package Artifact
+    needs: quality-matrix
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP Environment
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+
+      - name: Install Production Dependencies
+        run: composer install --no-dev --prefer-dist --no-progress --optimize-autoloader
+
+      - name: Create Production Zip Bundle
+        run: |
+          mkdir -p build/on-toolkit
+          rsync -rc --exclude-from='.gitignore' --exclude='build' --exclude='.git' --exclude='.github' --exclude='tests' --exclude='phpunit.xml' --exclude='phpcs.xml' --exclude='phpstan.neon' ./ build/on-toolkit/
+          cd build
+          zip -r on-toolkit.zip on-toolkit
+
+      - name: Upload Release Package Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: on-toolkit-release-plugin
+          path: build/on-toolkit.zip
+          retention-days: 30
