@@ -22,7 +22,7 @@ class DbCleanerController extends RestController
 
     public function register_routes(): void
     {
-        $namespace = (string)$this->namespace;
+        $namespace = $this->getNamespace();
 
         register_rest_route($namespace, '/db-cleaner/audit', [
             [

@@ -21,7 +21,7 @@ class HealthScoreController extends RestController
 
     public function register_routes(): void
     {
-        register_rest_route($this->namespace, '/health-score', [
+        register_rest_route($this->getNamespace(), '/health-score', [
             [
                 'methods' => 'GET',
                 'callback' => [$this, 'getHealthScore'],
@@ -32,7 +32,7 @@ class HealthScoreController extends RestController
 
     public function getHealthScore(WP_REST_Request $request): WP_REST_Response
     {
-        $result = $this->calculator->calculateScore();
-        return $this->respondSuccess($result);
+        $score_data = $this->calculator->calculateScore();
+        return $this->respondSuccess($score_data);
     }
 }

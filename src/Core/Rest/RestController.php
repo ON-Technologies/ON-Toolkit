@@ -17,6 +17,14 @@ abstract class RestController extends WP_REST_Controller
      */
     protected $namespace = 'on-toolkit/v1';
 
+    /**
+     * @return non-falsy-string
+     */
+    public function getNamespace(): string
+    {
+        return 'on-toolkit/v1';
+    }
+
     public function checkPermission(WP_REST_Request $request): bool
     {
         return current_user_can('manage_options');

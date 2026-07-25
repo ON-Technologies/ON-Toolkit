@@ -33,7 +33,7 @@ class LinkScannerController extends RestController
 
     public function register_routes(): void
     {
-        $namespace = (string)$this->namespace;
+        $namespace = $this->getNamespace();
 
         register_rest_route($namespace, '/link-scanner/links', [
             [
