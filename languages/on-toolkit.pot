@@ -1,0 +1,38 @@
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: ON Toolkit 1.0.0\n"
+"Report-Msgid-Bugs-To: https://ontoolkit.com\n"
+"POT-Creation-Date: 2026-07-24 22:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: ON Toolkit Team <dev@ontoolkit.com>\n"
+"Language-Team: ON Toolkit <dev@ontoolkit.com>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: ON Toolkit i18n Engine\n"
+"X-Domain: on-toolkit\n"
+
+#: src/Admin/AdminPageManager.php:24
+msgid "ON Toolkit"
+msgstr ""
+
+#: src/Admin/AdminPageManager.php:57
+msgid "Initializing ON Toolkit Dashboard..."
+msgstr ""
+
+#: src/Modules/LinkScanner/Services/HttpVerifier.php:66
+msgid "Target server timed out (failed to respond within 5s)."
+msgstr ""
+
+#: src/Modules/LinkScanner/Services/HttpVerifier.php:80
+msgid "URL is healthy and reachable (200 OK)."
+msgstr ""
+
+#: src/Modules/LinkScanner/Services/HttpVerifier.php:87
+msgid "404 Not Found — Target page was deleted or renamed."
+msgstr ""
+
+#: src/Modules/LinkScanner/Services/HttpVerifier.php:91
+msgid "403 Forbidden — WAF or Firewall blocked request."
+msgstr ""

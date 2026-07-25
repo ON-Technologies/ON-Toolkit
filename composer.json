@@ -1,0 +1,35 @@
+{
+    "name": "ontoolkit/on-toolkit",
+    "description": "Modern unified WordPress Site Health platform: Broken link scanner, media inspector & database space recovery.",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "authors": [
+        {
+            "name": "ON Toolkit Team",
+            "email": "dev@ontoolkit.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.4"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5",
+        "squizlabs/php_codesniffer": "^3.7",
+        "phpstan/phpstan": "^1.10"
+    },
+    "autoload": {
+        "psr-4": {
+            "ONToolkit\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ONToolkit\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true
+    }
+}

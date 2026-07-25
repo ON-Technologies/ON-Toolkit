@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<ruleset name="ON Toolkit Ruleset">
+    <description>WordPress Coding Standards for ON Toolkit</description>
+
+    <file>on-toolkit.php</file>
+    <file>src</file>
+    <file>bin</file>
+
+    <arg name="basepath" value="."/>
+    <arg name="colors"/>
+    <arg name="extensions" value="php"/>
+    <arg name="parallel" value="8"/>
+
+    <!-- Ignore vendor directory -->
+    <exclude-pattern>/vendor/*</exclude-pattern>
+    <exclude-pattern>/assets/*</exclude-pattern>
+
+    <!-- Include WordPress Coding Standards -->
+    <rule ref="WordPress-Core"/>
+    <rule ref="WordPress-Docs"/>
+    <rule ref="WordPress-VIP-Go"/>
+</ruleset>

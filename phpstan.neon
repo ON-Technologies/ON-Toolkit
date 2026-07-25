@@ -1,0 +1,11 @@
+parameters:
+    level: 8
+    paths:
+        - src
+        - on-toolkit.php
+    excludePaths:
+        - vendor
+    bootstrapFiles:
+        - vendor/autoload.php
+    ignoreErrors:
+        - '#Constant ABSPATH not found#'
