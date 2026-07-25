@@ -10,3 +10,4 @@ composer.lock
 .Trashes
 ehthumbs.db
 Thumbs.db
+.phpunit.result.cache

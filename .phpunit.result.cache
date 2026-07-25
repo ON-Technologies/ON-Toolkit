@@ -1,1 +1,0 @@
-{"version":1,"defects":[],"times":{"ONToolkit\\Tests\\Core\\HealthScoreCalculatorTest::testCalculateScoreReturnsValidStructure":0.006,"ONToolkit\\Tests\\Modules\\LinkScanner\\HttpVerifierTest::testHttpVerifierInstantiation":0.001}}
