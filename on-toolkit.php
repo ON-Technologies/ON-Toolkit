@@ -1,17 +1,17 @@
 <?php
 /**
  * Plugin Name: ON Toolkit
- * Plugin URI:  https://ontoolkit.com
- * Description: The ultra-high-performance, modular WordPress administration toolkit. Clean, fast, and simple.
- * Version:     1.0.0
- * Author:      ON Toolkit Team
- * Author URI:  https://ontoolkit.com
- * Donate link: https://github.com/sponsors/Tksharmely
+ * Plugin URI: https://github.com/ON-Technologies/on-toolkit
+ * Description: Modern Site Health Toolkit for WordPress.
+ * Version: 1.0.0
+ * Requires at least: 6.7
+ * Requires PHP: 8.1
+ * Author: ON Software Labs
+ * Author URI: https://github.com/ON-Technologies
+ * License: GPL v2 or later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: on-toolkit
  * Domain Path: /languages
- * License:     GPL-2.0-or-later
- * Requires PHP: 7.4
- * Requires at least: 6.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
