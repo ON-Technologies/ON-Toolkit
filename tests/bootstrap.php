@@ -20,3 +20,25 @@ if (!function_exists('__')) {
 if (!function_exists('esc_html__')) {
     function esc_html__($text, $domain = 'default') { return $text; }
 }
+if (!function_exists('get_option')) {
+    function get_option($option, $default = false) { return $default; }
+}
+if (!function_exists('wp_using_ext_object_cache')) {
+    function wp_using_ext_object_cache($using = null) { return false; }
+}
+
+// Mock $wpdb global
+$GLOBALS['wpdb'] = new class {
+    public $prefix = 'wp_';
+    public $posts = 'wp_posts';
+    public $postmeta = 'wp_postmeta';
+    public $options = 'wp_options';
+    
+    public function get_var($query) {
+        return 0; // Return 0 for count queries
+    }
+    
+    public function prepare($query, ...$args) {
+        return $query;
+    }
+};
